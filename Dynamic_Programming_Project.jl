@@ -118,12 +118,8 @@ function Stock_management(n::Int64,T::Int64)
         StockNextDay::Array{Int64} = fsto.(StockEndDay .+ command)               #stock the next morning after the command
         rev = [REVENUE[StockNextDay[i]+1,t+1] for i=1:(n+1)]  
 
-        
-        if ( t!= T)
-            return sum((delivered .* 3 - 0.1 .* StockEndDay .- command .+ rev) .* density.(d))  
-        else
-            return sum((delivered .* 3 - 0.1 .* StockEndDay) .* density.(d))
-        end
+        #doesn't need to check if t = T 
+        sum((delivered .* 3 - 0.1 .* StockEndDay .- command .+ rev) .* density.(d))  
     end
 
     REVENUE[:,T] = [evaluateStrat(Binomial(n,pp[T]),i,0,0) for i=0:20]            #Initialisation at t = T
@@ -149,4 +145,63 @@ REVENUE, STRATEGY = Stock_management(7,14)
 
 REVENUE[11,1]
 policySimulator(STRATEGY,7,14,10^6)           #REVENUE[11,1] ∈ confidence interval 
+
+
+
+function Stock_management_2(n::Int64,T::Int64)    
+    pp = [p[t%14+1] for t=0:(T-1)]                                                           
+    REVENUE::Matrix{Float64} = zeros(21,T)                                      #REVENUE[j,t] maximum expect revenue for state j-1 at day t
+    STRATEGY::Matrix{Int64} = zeros(21,T)                                       #STRATEGY[j,t] the command for reach the maximum expected revenue at state j-1 the day t
+    d = [i for i=0:n]
+    deliv::Function = x -> min(0,x)
+
+    #Give the expected value of the next day t+1 when your stock = stock, your command = command, at day t 
+    #This is an implementation of calculous made in the last function in a vectorized syntax 
+
+    function eval2(bin1::Binomial{Float64},bin2::Binomial{Float64},stock::Int64,command::Int64,t::Int64)::Float64
+        d = [i for i=0:n]
+        density1::Function = x->pdf(bin1,x)                                        #The probability density of the day t 
+        density2::Function = x->pdf(bin2,x)   
+        delivered1::Array{Float64} = d .+ deliv.(stock .- d)                       #number of items delivered  
+        fsto::Function = x -> min(20,x) 
+    
+        StockEndDay1::Array{Int64} = stock .- delivered1                           #stock at the end of the day (before the command)
+        StockNextDay1::Array{Int64} = StockEndDay1                                 #stock the next morning after the command
+        if (t+2 <=T)
+            delivered2 = [d .+ deliv.(StockNextDay1[i] .- d) for i=1:(n+1)]
+            StockEndDay2 = [StockNextDay1[i] .- delivered2[i] for i=1:(n+1)]
+            StockNextDay2 = [fsto(StockEndDay2[i][j] + command) for i=1:(n+1), j=1:(n+1)]
+            rev = [[REVENUE[StockNextDay2[i,j]+1,t+2] for i =1:(n+1)] for j=1:(n+1)]
+            proba = [[pdf(bin1,i)*pdf(bin2,j) for i=0:n] for j = 0:n]
+            return sum([sum((delivered1[i].*3 .- 0.1 * StockEndDay1[i] .+ delivered2[i][j] .*3 .- 0.1 .* StockEndDay2[i][j] .- command .+ rev[i][j]) .*proba[i][j]) for i=1:(n+1), j=1:(n+1)])
+        elseif (t+1 == T)
+            revbis::Array{Float64} = [REVENUE[StockNextDay1[i]+1,t+1] for i=1:(n+1)]
+            return  sum((delivered1 .* 3 - 0.1 .* StockEndDay1 .+ revbis) .* density1.(d))
+        else 
+            return  sum((delivered1 .* 3 - 0.1 .* StockEndDay1) .* density1.(d))
+        end
+    end
+
+
+    REVENUE[:,T] = [eval2(Binomial(n,pp[T]),Binomial(n,0),i,0,T) for i=0:20]      #Initialisation at t = T
+    REVENUE[:,T-1] = [eval2(Binomial(n,pp[T-1]),Binomial(n,pp[T]),i,0,T-1) for i=0:20] 
+
+    for t=(T-2):-1:1                                                              #Iteration on days
+        bin1 = Binomial(n,pp[t])                                                  #The density of the command  
+        bin2 = Binomial(n,pp[t+1])                                           
+        for stock=0:20                                                            #Iteration on states
+            eval = x -> eval2(bin1,bin2,stock,x,t)                                #returning the expected revenue for command = x
+            COMMAND = [i for i=0:5]                                             
+            possibleRevenue = eval.(COMMAND)                                      #All the expect revenue for all possible command
+            act = argmax(possibleRevenue)                                         #Choising the best command
+            REVENUE[stock+1,t] = possibleRevenue[act]                             #Memorizing the maximum expected revenue
+            STRATEGY[stock+1,t] = act - 1                                         #Memorizing the command
+        end
+    end
+    REVENUE,STRATEGY
+end
+
+
+REVENUE,STRATEGY = Stock_management_2(7,14)
+
 
