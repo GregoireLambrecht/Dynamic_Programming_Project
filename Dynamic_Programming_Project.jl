@@ -76,62 +76,66 @@ function policySimulator(πt::Matrix{Int64}, n::Int64,T::Int64, draft::Int64) #�
     R::Float64 = 0                                                  #summing results of the monte carlo method                          
     var::Float64 = 0                                                #The variance
     for k=1:draft                                                   #Iteration for the monte carlo method
-        d = Bin.(pp)                                                 #simulation of the demand
+        d = Bin.(pp)                                                #simulation of the demand
         STOCK::Array{Int64} = zeros(T+1)                            #stock
         STOCK[1] = 10
         STOCK[T+1] = 0
-        r::Float64 = 0                                                      #The revenue
+        r::Float64 = 0                                                          #The revenue
         for t=1:T
-            delivered = d[t] + min(0,STOCK[t] - d[t])                       #number of article delivered
+            delivered = d[t] + min(0,STOCK[t] - d[t])                           #number of article delivered
             StockEndDay = STOCK[t]- delivered    #actualisation of the stock
-            r += delivered*3 - 0.1 * StockEndDay - πt[STOCK[t]+1,t]          #summing the revenue of the day
+            r += delivered*3 - 0.1 * StockEndDay - πt[STOCK[t]+1,t]             #summing the revenue of the day
             STOCK[t+1] = min(20,StockEndDay + πt[STOCK[t]+1,t])*(t<T+1)
         end
         R+=r
         var+=r*r
     end
     var = var/draft-R*R/(draft*draft)
-    size = 2*1.96 * sqrt(var/draft)                                 #size of the confidence interval
+    size = 1.96 * sqrt(var/draft)                                             #confidence interval = [R/draft +- size]
     R/draft,size
 end
 
 
-πtest = rand(Binomial(5,0.5),21,14)                                 #πt[j,i] is the number of article bough the day i if STOCK[i] == j
+πtest = rand(Binomial(5,0.5),21,14)                                             #πt[j,i] is the number of article bough the day i if STOCK[i] == j-1
 
-policySimulator(πtest,7,14,10^6)  
+policySimulator(πtest,7,14,10^6) 
+
+
+
+#Give the expected value of the next day t+1 when your stock = stock, your command = command, at day t 
+#This is an implementation of calculous made in the last function in a vectorized syntax 
+function evaluateStrat(n::Int64,T::Int64,bin::Binomial{Float64},REVENUE::Matrix{Float64},stock::Int64,command::Int64,t::Int64)::Float64 
+    d = [i for i=0:n]
+    deliv::Function = x -> min(0,x) 
+    density::Function = x->pdf(bin,x)                                        #The probability density of the day t 
+    delivered::Array{Float64} = d .+ deliv.(stock .- d)                      #number of items delivered  
+    fsto::Function = x -> min(20,x) 
+
+    StockEndDay::Array{Int64} = stock .- delivered                           #stock at the end of the day (before the command)
+    StockNextDay::Array{Int64} = fsto.(StockEndDay .+ command)               #stock the next morning after the command
+    rev = [REVENUE[StockNextDay[i]+1,t+1] for i=1:(n+1)]  
+
+    
+    if ( t!= T)
+        return sum((delivered .* 3 - 0.1 .* StockEndDay .- command .+ rev) .* density.(d))  
+    else
+        return sum((delivered .* 3 - 0.1 .* StockEndDay) .* density.(d))
+    end
+end
+
+
 
 function Stock_management(n::Int64,T::Int64)    
     pp = [p[t%14+1] for t=0:(T-1)]                                                           
-    REVENUE::Matrix{Float64} = zeros(21,T)                                      #REVENUE[j,t] maximum expect revenue for state j-1 at day t
-    STRATEGY::Matrix{Int64} = zeros(21,T)                                       #STRATEGY[j,t] the command for reach the maximum expected revenue at state j-1 the day t
-    d = [i for i=0:n]
-    deliv::Function = x -> min(0,x)
+    REVENUE::Matrix{Float64} = zeros(21,T)                                        #REVENUE[j,t] maximum expect revenue for state j-1 at day t
+    STRATEGY::Matrix{Int64} = zeros(21,T)                                         #STRATEGY[j,t] the command for reach the maximum expected revenue at state j-1 the day t
 
-    #Give the expected value of the next day t+1 when your stock = stock, your command = command, at day t 
-    #This is an implementation of calculous made in the last function in a vectorized syntax 
-    function evaluateStrat(bin::Binomial{Float64},stock::Int64,command::Int64,t::Int64)::Float64  
-        density::Function = x->pdf(bin,x)                                        #The probability density of the day t 
-        delivered::Array{Float64} = d .+ deliv.(stock .- d)                      #number of items delivered  
-        fsto::Function = x -> min(20,x) 
-
-        StockEndDay::Array{Int64} = stock .- delivered                           #stock at the end of the day (before the command)
-        StockNextDay::Array{Int64} = fsto.(StockEndDay .+ command)               #stock the next morning after the command
-        rev = [REVENUE[StockNextDay[i]+1,t+1] for i=1:(n+1)]  
-
-        
-        if ( t!= T)
-            return sum((delivered .* 3 - 0.1 .* StockEndDay .- command .+ rev) .* density.(d))  
-        else
-            return sum((delivered .* 3) .* density.(d))
-        end
-    end
-
-    REVENUE[:,T] = [evaluateStrat(Binomial(n,pp[T]),i,0,0) for i=0:20]            #Initialisation at t = T
+    REVENUE[:,T] = [evaluateStrat(n,T,Binomial(n,pp[T]),REVENUE,i,0,0) for i=0:20]            #Initialisation at t = T
 
     for t=(T-1):-1:1                                                              #Iteration on days
         bin = Binomial(n,pp[t])                                                   #The density of the command                                             
         for stock=0:20                                                            #Iteration on states
-            eval = x -> evaluateStrat(bin,stock,x,t)                              #returning the expected revenue for command = x
+            eval = x -> evaluateStrat(n,T,bin,REVENUE,stock,x,t)                              #returning the expected revenue for command = x
             COMMAND = [i for i=0:5]                                             
             possibleRevenue = eval.(COMMAND)                                      #All the expect revenue for all possible command
             act = argmax(possibleRevenue)                                         #Choising the best command
@@ -145,8 +149,8 @@ end
 
 
 #
-REVENUE, STRATEGY = Stock_management(7,20)
+REVENUE, STRATEGY = Stock_management(7,14)
 
 REVENUE[11,1]
-policySimulator(STRATEGY,7,20,10^6)           #REVENUE[11,1] ∈ confidence interval 
+policySimulator(STRATEGY,7,14,10^6)           #REVENUE[11,1] ∈ confidence interval 
 
