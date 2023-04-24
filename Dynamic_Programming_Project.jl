@@ -59,17 +59,22 @@ end
 
 
 RESULTS, STRATEGY = Maintenance_problem(12)
+<<<<<<< HEAD
 
 println("#######################################################################################")
 println("EXERCIE 1")
 println("The Result is :")
 println(RESULTS)
 println("The Strategy is :")
+=======
+println(RESULTS)
+>>>>>>> main
 println(STRATEGY)
 
 println("The answer is :")
 print(RESULTS[4,1])
 
+<<<<<<< HEAD
 ################################################################################################
 #EXERCICE 2
 ################################################################################################ 
@@ -105,11 +110,30 @@ function policySimulator(πt::Matrix{Int64}, n::Int64,T::Int64, draft::Int64) #�
             StockEndDay = STOCK[t]- delivered                                   #actualisation of the stock
             r += delivered*3 - 0.1 * StockEndDay - πt[STOCK[t],t]               #summing the revenue of the day
             STOCK[t+1] = min(20,StockEndDay + πt[STOCK[t],t])*(t<T+1)
+=======
+p = [0.2, 0.2, 0.4, 0.4, 0.7, 0.7, 0.2, 0.2, 0.8, 0.8, 0.5, 0.5, 0.2, 0.2]
+function policySimulator(πt::Matrix{Int64}, n::Int64, draft::Int64) #πt is the policy, n the binomial parameter of the demand, draft the number of simulations for the monte carlo method
+    T = 14                                                          #Time
+    Bin = x->rand(Binomial(n,x))
+    R::Float64 = 0                                                  #summing results of the monte carlo method                          
+    var::Float64 = 0                                                #The variance
+    for k=1:draft                                                   #Iteration for the monte carlo method
+        d = Bin.(p)                                                 #simulation of the demand
+        STOCK::Array{Int64} = zeros(T+1)                            #stock
+        STOCK[1] = 10
+        STOCK[T+1] = 0
+        r::Float64 = 0                                                      #The revenue
+        for t=1:14
+            delivercded = d[t] + min(0,STOCK[t] - d[t])                       #number of article delivered
+            STOCK[t+1] = min(20,STOCK[t] + πt[STOCK[t]+1,t] - delivered)    #actualisation of the stock
+            r += delivered*3 - 0.1 * STOCK[t+1] - πt[STOCK[t]+1,t]          #summing the revenue of the day
+>>>>>>> main
         end
         R+=r
         var+=r*r
     end
     var = var/draft-R*R/(draft*draft)
+<<<<<<< HEAD
     size = 1.96 * sqrt(var/draft)                                             #confidence interval = [R/draft +- size]
     R/draft,size
 end
@@ -346,3 +370,13 @@ policySimulator(πstar,10,100000)
 
 
 
+=======
+    size = 2*1.96 * sqrt(var/draft)                                 #size of the confidence interval
+    R/draft,size
+end
+
+
+πtest = rand(Binomial(5,0.5),21,14)                                 #πt[j,i] is the number of article bough the day i if STOCK[i] == j
+
+policySimulator(πtest,7,10^6)  
+>>>>>>> main
