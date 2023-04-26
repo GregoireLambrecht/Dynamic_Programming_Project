@@ -282,10 +282,15 @@ function max3(k::Int64)
     (3*k*(k-1) + 1) * (1/6)^3
 end
 
+function law(nDices::Int64,k::Int64)
+    (k/6)^nDices - ((k-1)/6)^nDices
+end
+
 
 #The LAW of max(X1), max(X1,X2), max(X1,X2,X3)
 #LAW[i,k] = P(max(X1,...,Xi) = k)
-LAW = transpose(hcat(1/6 .* ones(6), (2 .*collect(1:6) .- 1) ./ 36, max3.(collect(1:6)))) 
+
+LAW = transpose(hcat([(x->law(nDices,x)).(collect(1:6)) for nDices=1:10]...))
 
 #T is the time
 #nDices is the maximum number of dices 
@@ -344,5 +349,67 @@ println("RESULTS with Monte Carlo :")
 policySimulator(πstar,10,100000)
 
 
+#T is the time
+#nDices is the maximum number of dices 
+function Simple_game_2(T::Int64,nDices::Int64,SELLING)
+    @time begin
+    nPoints::Int64 = T*12 
+    RESULTS::Array{Float64} = zeros(nDices,nPoints, T)               #RESUTLS[i,j,t] = expected points if we have j points and i dices at day t  
+    STRATEGY::Array{Int64} = zeros(nDices, nPoints, T)               #STRATEGY[i,j,t] = strategy to choose at day t if j points and i dices
+    
+    K = [0,2,4,5,8]
 
+    for i=1:nDices
+        for j=1:nPoints
+            RESULTS[i,j,T] = j-1 + K[i]*SELLING                                     #Initialisation at day T
+        end
+    end
+
+    for t=(T-1):-1:1                                                 #Iteration on times
+        for i=1:nDices                                               #Iteration on dices
+            for j=1:(nPoints - (T-t)*12)                              #Iteration on points 
+                if i==nDices                                                                                #Impossible to buy more dices
+                    #RESULTS[i,j,t] = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
+                    dontSplit = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
+                    Split = sum(LAW[i,:] .* RESULTS[i-1,(j+2):2:(j+12),t+1])
+                    STRATEGY[i,j,t] = 2 * (Split > dontSplit)
+                    RESULTS[i,j,t] = max(Split,dontSplit)
+                else
+                    
+                    if (j-1<=5)                                                                             #Impossible to buy more dices
+                        if (i==1)
+                            RESULTS[i,j,t] = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
+                        else 
+                            dontSplit = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
+                            Split = sum(LAW[i,:] .* RESULTS[i-1,(j+2):2:(j+12),t+1]) 
+                            STRATEGY[i,j,t] = 2 * (Split > dontSplit)
+                            RESULTS[i,j,t] = max(Split,dontSplit)
+                        end
+
+                    else
+                        if (i==1)                                                                           #Possible to buy more dices
+                            Buy = sum( LAW[i+1,:] .* RESULTS[i+1,(j+1):(j+6),t+1]) -5                           #Result if you buy a dice                        
+                            dontBuy = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])                               #If you don't buy
+                            STRATEGY[i,j,t] = Buy >= dontBuy                                                    #Do the best moove
+                            RESULTS[i,j,t] = max(Buy, dontBuy)                                                  #Get the best result
+                        else 
+                            Buy_dontSplit = sum( LAW[i+1,:] .* RESULTS[i+1,(j+1):(j+6),t+1]) -5                           #Result if you buy a dice                        
+                            dontBuy_dontSplit = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])                               #If you don't buy
+                            Buy_Split = sum( LAW[i+1,:] .* RESULTS[i,(j+2):2:(j+12),t+1]) -5
+                            dontBuy_Split = sum(LAW[i,:] .* RESULTS[i-1,(j+2):2:(j+12),t+1]) 
+                            STRATEGY[i,j,t] = argmax([dontBuy_dontSplit,Buy_dontSplit,dontBuy_Split,Buy_Split])-1                                                  #Do the best moove
+                            RESULTS[i,j,t] = max([dontBuy_dontSplit,Buy_dontSplit,dontBuy_Split,Buy_Split]...) 
+                        end
+                    end
+                end
+            end
+        end
+    end
+    end
+    RESULTS, STRATEGY
+end
+
+
+RESULTS1, STRATEGY1 = Simple_game_2(11,5, false)
+RESULTS2, STRATEGY2 = Simple_game_2(1000,5, false)
 
