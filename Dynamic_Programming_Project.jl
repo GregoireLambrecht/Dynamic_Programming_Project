@@ -1,9 +1,16 @@
+using Random, Distributions
+
+#README 
+#######################################################################################
+#Please run each line, each function, line by line in your software. (use ctrl + ENTR is VS CODE)
+#It will display in a correctly each results in the terminal. 
+#######################################################################################
+#EXERCIE 1
+
 #state 1 = Broken 
 #state 2 = Old
 #state 3 = Good
 #state 4 = New
-using Random, Distributions
-
 
 function Maintenance_problem(n::Int64)
     @time begin
@@ -60,22 +67,18 @@ end
 
 RESULTS, STRATEGY = Maintenance_problem(12)
 
-println("#######################################################################################")
-println("EXERCIE 1")
-println("The Result is :")
-println(RESULTS)
-println("The Strategy is :")
-println(STRATEGY)
+#######################################################################################
+#The Result is :")
+RESULTS
+#The Strategy is 
+STRATEGY
 
-println("The answer is :")
-print(RESULTS[4,1])
+#The answer is :
+RESULTS[4,1]
 
 ################################################################################################
 #EXERCICE 2
 ################################################################################################ 
-
-println("#######################################################################################")
-println("EXERCIE 2")
 
 n = 10
 
@@ -114,11 +117,11 @@ function policySimulator(πt::Matrix{Int64}, n::Int64,T::Int64, draft::Int64) #�
     R/draft,size
 end
 
-println("2.d ) A random Strategy :")
-πtest = rand(Binomial(5,0.5),20,14)                                             #πt[j,i] is the number of article bough the day i if STOCK[i] == j-1
-println(πtest)
+#2.d ) A random Strategy 
+πtest = rand(Binomial(5,0.5),20,14)                                           #πt[j,i] is the number of article bough the day i if STOCK[i] == j-1
 
-println("The result of this strategy is :")
+
+#The result of this strategy is :
 policySimulator(πtest,10,14,10^6)  
 
 function Stock_management(n::Int64,T::Int64)    
@@ -159,28 +162,25 @@ function Stock_management(n::Int64,T::Int64)
     REVENUE,STRATEGY
 end
 
-println("2.e )For T = 14 the answer is :")
+#2.e )For T = 14 the answer is :
 REVENUE, STRATEGY = Stock_management(10,14)
 
-println("The Strategy :")
-println(STRATEGY)
-println("The revenue :")
-println(REVENUE)
-println("The maximum expected income :")
-println(REVENUE[10,1])
-println("2.f )With Monte carlo : (expected value, size of the interval)")
+#The Strategy :
+STRATEGY
+#The revenue :")
+REVENUE
+#The maximum expected income :")
+REVENUE[10,1]
+#2.f )With Monte carlo : (expected value, size of the interval)")
 policySimulator(STRATEGY,10,14,10^6)           #REVENUE[11,1] ∈ confidence interval  
 
 
-println("3.a )For T = 96 the answer is :")
+#3.a )For T = 96 the answer is :")
 REVENUE, STRATEGY = Stock_management(10,96)
-println(STRATEGY)
-println("The revenue :")
-println(REVENUE)
-println("The maximum expected income :")
-println(REVENUE[10,1])
-println("With Monte carlo : (expected value, size of the interval)")
-policySimulator(STRATEGY,10,96,10^4)           #REVENUE[11,1] ∈ confidence interval  
+#"The maximum expected income :")
+REVENUE[10,1]
+#With Monte carlo : (expected value, size of the interval)
+policySimulator(STRATEGY,10,96,10^5)           #REVENUE[11,1] ∈ confidence interval  
 
 
 function Stock_management_2(n::Int64,T::Int64)    
@@ -226,15 +226,15 @@ function Stock_management_2(n::Int64,T::Int64)
     REVENUE,STRATEGY
 end
 
-println("3.b ) For T = 14 the answer is :")
+#"3.b ) For T = 14 the answer is :")
 REVENUE,STRATEGY = Stock_management_2(10,14)
 
-println("The Strategy :")
-println(STRATEGY)
-println("The revenue :")
-println(REVENUE)
-println("The maximum expected income :")
-println(REVENUE[10,1,1])
+#"The Strategy :")
+STRATEGY
+#The revenue :")
+REVENUE
+#The maximum expected income :")
+REVENUE[10,1,1]
 
 
 
@@ -274,23 +274,20 @@ function policySimulator(Strat::Function, T::Int64, draft::Int64)   #draft the n
     R/draft,size
 end
 
-println("The naive strategy : Buy a dice when it is possible")
-println("Result with policy simulator :")
-policySimulator(naiveStrat, 10,1000)
+#The naive strategy : Buy a dice when it is possible")
+#Result with policy simulator :")
+policySimulator(naiveStrat, 10,10^6)
 
-function max3(k::Int64)
-    (3*k*(k-1) + 1) * (1/6)^3
-end
 
 function law(nDices::Int64,k::Int64)
     (k/6)^nDices - ((k-1)/6)^nDices
 end
 
 
-#The LAW of max(X1), max(X1,X2), max(X1,X2,X3)
+#The LAW of max(X1), max(X1,X2), max(X1,X2,X3), ...
 #LAW[i,k] = P(max(X1,...,Xi) = k)
 
-LAW = transpose(hcat([(x->law(nDices,x)).(collect(1:6)) for nDices=1:10]...))
+LAW = transpose(hcat([(x->law(nDices,x)).(collect(1:6)) for nDices=1:100]...))
 
 #T is the time
 #nDices is the maximum number of dices 
@@ -315,7 +312,7 @@ function Simple_game(T::Int64,nDices::Int64)
                     if (j-1<=5)                                                                             #Impossible to buy more dices
                         RESULTS[i,j,t] = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
                     else                                                                                    #Possible to buy more dices
-                        Buy = sum( LAW[i+1,:] .* RESULTS[i+1,(j+1):(j+6),t+1]) -5                           #Result if you buy a dice                        
+                        Buy = sum( LAW[i+1,:] .* RESULTS[i+1,(j-4):(j+1),t+1])                              #Result if you buy a dice                        
                         dontBuy = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])                               #If you don't buy
                         STRATEGY[i,j,t] = Buy >= dontBuy                                                    #Do the best moove
                         RESULTS[i,j,t] = max(Buy, dontBuy)                                                  #Get the best result
@@ -330,13 +327,12 @@ end
 
 
 RESULTS, STRATEGY = Simple_game(11,3)
-println("4.e )")
-println("Results:")
-println(RESULTS)
-println("STRATEGY:")
-println(STRATEGY)
-println("Maximum expected points : ")
-println(RESULTS[1,1,1])
+#4.e )")
+RESULTS
+#STRATEGY:")
+STRATEGY
+#"Maximum expected points : 
+RESULTS[1,1,1]
 
 
 #Best Strategy as a function
@@ -344,9 +340,19 @@ function πstar(t::Int64, points::Int64, dices::Int64)::Int64
     STRATEGY[dices,points+1,t]
 end  
 
-println("4.f )")
-println("RESULTS with Monte Carlo :")
+#4.f )")
+#RESULTS with Monte Carlo :")
 policySimulator(πstar,10,100000)
+
+
+#4.g )")
+RESULTS, STRATEGY = Simple_game(11,10)
+RESULTS
+#STRATEGY:")
+STRATEGY
+#"Maximum expected points : 
+RESULTS[1,1,1]
+
 
 
 #T is the time
@@ -355,10 +361,14 @@ function Simple_game_2(T::Int64,nDices::Int64,SELLING)
     @time begin
     nPoints::Int64 = T*12 
     RESULTS::Array{Float64} = zeros(nDices,nPoints, T)               #RESUTLS[i,j,t] = expected points if we have j points and i dices at day t  
-    STRATEGY::Array{Int64} = zeros(nDices, nPoints, T)               #STRATEGY[i,j,t] = strategy to choose at day t if j points and i dices
-    
+    STRATEGY::Array{Int64} = zeros(nDices, nPoints, T)               #STRATEGY[i,j,t] = strategy to choose at day t if j points and i dices (buy or not)
+    SPLIT::Array{Int64} = zeros(nDices, nPoints, 6, T)              #SPLIT[i,j,k,t] = strategy to choose at day t if j points, i dices at the beginning of the day and the result of the dice is k
     K = [0,2,4,5,8]
 
+    if nDices>5
+        append!(K,zeros(nDices-5))
+    end
+    
     for i=1:nDices
         for j=1:nPoints
             RESULTS[i,j,T] = j-1 + K[i]*SELLING                                     #Initialisation at day T
@@ -369,36 +379,41 @@ function Simple_game_2(T::Int64,nDices::Int64,SELLING)
         for i=1:nDices                                               #Iteration on dices
             for j=1:(nPoints - (T-t)*12)                              #Iteration on points 
                 if i==nDices                                                                                #Impossible to buy more dices
-                    #RESULTS[i,j,t] = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
-                    dontSplit = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
-                    Split = sum(LAW[i,:] .* RESULTS[i-1,(j+2):2:(j+12),t+1])
-                    STRATEGY[i,j,t] = 2 * (Split > dontSplit)
-                    RESULTS[i,j,t] = max(Split,dontSplit)
+                    maxSplit = max.(RESULTS[i,(j+1):(j+6),t+1],RESULTS[i-1,(j+2):2:(j+12),t+1])
+                    SPLIT[i,j,:,t]=RESULTS[i,(j+1):(j+6),t+1] .< RESULTS[i-1,(j+2):2:(j+12),t+1]            #SPLIT = 1 if we have to split, i.e. if the expected result is biffer with split
+                    result = sum(LAW[i,:] .* maxSplit)
+                    RESULTS[i,j,t] = result
                 else
                     
                     if (j-1<=5)                                                                             #Impossible to buy more dices
                         if (i==1)
                             RESULTS[i,j,t] = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
                         else 
-                            dontSplit = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])
-                            Split = sum(LAW[i,:] .* RESULTS[i-1,(j+2):2:(j+12),t+1]) 
-                            STRATEGY[i,j,t] = 2 * (Split > dontSplit)
-                            RESULTS[i,j,t] = max(Split,dontSplit)
+                            result = sum(LAW[i,:] .* max.(RESULTS[i,(j+1):(j+6),t+1],RESULTS[i-1,(j+2):2:(j+12),t+1]))
+                            SPLIT[i,j,:,t]=RESULTS[i,(j+1):(j+6),t+1] .< RESULTS[i-1,(j+2):2:(j+12),t+1]
+                            RESULTS[i,j,t] = result
                         end
 
                     else
-                        if (i==1)                                                                           #Possible to buy more dices
-                            Buy = sum( LAW[i+1,:] .* RESULTS[i+1,(j+1):(j+6),t+1]) -5                           #Result if you buy a dice                        
-                            dontBuy = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])                               #If you don't buy
-                            STRATEGY[i,j,t] = Buy >= dontBuy                                                    #Do the best moove
-                            RESULTS[i,j,t] = max(Buy, dontBuy)                                                  #Get the best result
+                        if (i==1)       
+                                                                                                #Possible to buy more dices
+                            Buy = sum( LAW[i+1,:] .* (max.(RESULTS[i+1,(j-4):(j+1),t+1],RESULTS[i,(j-3):2:(j+7),t+1])))          #Result if you buy a dice                        
+                            dontBuy = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])                         #If you don't buy
+                                                                             #Do the best moove
+                            RESULTS[i,j,t] = max([dontBuy,Buy]...) 
+                            SPLIT[i,j,:,t]=RESULTS[i+1,(j+1):(j+6),t+1] .< RESULTS[i,(j+2):2:(j+12),t+1]
+                            STRATEGY[i,j,t] = Buy > dontBuy                                                        #STRATEGY = 1 if we have to buy, if the expected result is bigger if we buy                
                         else 
-                            Buy_dontSplit = sum( LAW[i+1,:] .* RESULTS[i+1,(j+1):(j+6),t+1]) -5                           #Result if you buy a dice                        
-                            dontBuy_dontSplit = sum(LAW[i,:] .* RESULTS[i,(j+1):(j+6),t+1])                               #If you don't buy
-                            Buy_Split = sum( LAW[i+1,:] .* RESULTS[i,(j+2):2:(j+12),t+1]) -5
-                            dontBuy_Split = sum(LAW[i,:] .* RESULTS[i-1,(j+2):2:(j+12),t+1]) 
-                            STRATEGY[i,j,t] = argmax([dontBuy_dontSplit,Buy_dontSplit,dontBuy_Split,Buy_Split])-1                                                  #Do the best moove
-                            RESULTS[i,j,t] = max([dontBuy_dontSplit,Buy_dontSplit,dontBuy_Split,Buy_Split]...) 
+                            Buy = sum( LAW[i+1,:] .* (max.(RESULTS[i+1,(j-4):(j+1),t+1], RESULTS[i,(j-3):2:(j+7),t+1])))           #Result if you buy a dice                        
+                            dontBuy = sum(LAW[i,:] .* max.(RESULTS[i,(j+1):(j+6),t+1],RESULTS[i-1,(j+2):2:(j+12),t+1]   ))
+                            
+                            
+                            STRATEGY[i,j,t] = Buy > dontBuy
+                            SPLIT[i,j,:,t]= STRATEGY[i,j,t] * (RESULTS[i+1,(j+1):(j+6),t+1] .< RESULTS[i,(j+2):2:(j+12),t+1]) .+ (1-STRATEGY[i,j,t]) * (RESULTS[i,(j+1):(j+6),t+1] .<RESULTS[i-1,(j+2):2:(j+12),t+1]   )
+
+
+                                                                            
+                            RESULTS[i,j,t] = max([dontBuy,Buy]...)                     #Do the best moove
                         end
                     end
                 end
@@ -409,7 +424,23 @@ function Simple_game_2(T::Int64,nDices::Int64,SELLING)
     RESULTS, STRATEGY
 end
 
-
+#5.a )")
 RESULTS1, STRATEGY1 = Simple_game_2(11,5, false)
-RESULTS2, STRATEGY2 = Simple_game_2(1000,5, false)
+#STRATEGY:")
+STRATEGY
+#"Maximum expected points : 
+RESULTS1[1,1,1]
 
+#5.b )")
+RESULTS1, STRATEGY1 = Simple_game_2(11,10, false)
+#STRATEGY:")
+STRATEGY
+#"Maximum expected points : 
+RESULTS1[1,1,1]
+
+#5.c )")
+RESULTS2, STRATEGY2 = Simple_game_2(11,5, true)
+#STRATEGY:")
+STRATEGY2
+#"Maximum expected points : 
+RESULTS2[1,1,1]
